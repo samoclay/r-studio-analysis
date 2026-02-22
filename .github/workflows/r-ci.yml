@@ -20,13 +20,8 @@ jobs:
       - name: Run plot-test.R
         run: Rscript plot-test.R
 
-      - name: Run summary-test.R
-        run: Rscript summary-test.R
-
-      - name: Upload artifacts
+      - name: Upload plot artifact
         uses: actions/upload-artifact@v4
         with:
-          name: outputs
-          path: |
-            plot.png
-            summary.csv
+          name: plot
+          path: plot.png
