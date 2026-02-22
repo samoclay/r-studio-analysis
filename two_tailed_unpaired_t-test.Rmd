@@ -6,7 +6,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-experiment_id <- "27815R1"   # <-- change this each time
+experiment_id <- "CSV_FILE_NAME/PATH_HERE"   # <-- change this each time
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -223,3 +223,4 @@ ggplot(df_long, aes(x = group, y = value)) +
   theme_bw(base_size = 14) +
   theme(plot.title = element_text(face = "bold", hjust = 0.5))
 ```
+
