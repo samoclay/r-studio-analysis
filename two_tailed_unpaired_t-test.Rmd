@@ -1,0 +1,225 @@
+---
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+experiment_id <- "CSV_FILE_NAME"   # <-- change this each time
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(kableExtra)
+```
+
+# Load Data
+This script reads a **tab‑delimited file** with exactly two numeric columns.
+
+```{r}
+data <- read.delim(experiment_id, header = TRUE, sep = "\t")
+
+# Extract column names
+col1 <- names(data)[1]
+col2 <- names(data)[2]
+```
+
+# Show raw heteroplasmy input table
+
+```{r echo=FALSE}
+kable(
+  data,
+  caption = "Input Heteroplasmy Levels",
+  align = "c",
+  digits = 4
+) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+# Compute Summary Statistics
+
+```{r}
+# Means
+mean1 <- mean(data[[col1]], na.rm = TRUE)
+mean2 <- mean(data[[col2]], na.rm = TRUE)
+
+# SDs
+sd1 <- sd(data[[col1]], na.rm = TRUE)
+sd2 <- sd(data[[col2]], na.rm = TRUE)
+
+# Welch t-test
+tt <- t.test(data[[col1]], data[[col2]])  # default = two-sided Welch
+p_value_exact <- format(tt$p.value, scientific = FALSE, digits = 10)
+lower_CI <- tt$conf.int[1]
+upper_CI <- tt$conf.int[2]
+
+# F-test for variances (GraphPad reports this)
+f_test <- var.test(data[[col1]], data[[col2]])
+
+# Reshape for descriptive stats
+df_long <- data %>%
+  pivot_longer(cols = everything(),
+               names_to = "group",
+               values_to = "value")
+
+# Summary stats
+sumstats <- df_long %>%
+  group_by(group) %>%
+  summarise(
+    n    = n(),
+    mean = mean(value, na.rm = TRUE),
+    sd   = sd(value, na.rm = TRUE),
+    se   = sd / sqrt(n),
+    ci95 = 1.96 * se,
+    .groups = "drop"
+  )
+```
+
+# Build Table 1 (Unpaired t‑test)
+
+```{r}
+table1 <- data.frame(
+  Field = c(
+    "Table Analyzed",
+    "Column A",
+    "vs.",
+    "Column B",
+    "P value",
+    "P value summary",
+    "Significantly different (P < 0.05)?",
+    "One- or two-tailed P value?",
+    "t, df",
+    "Mean of column A",
+    "Mean of column B",
+    "Difference between means (A - B) ± SEM",
+    "95% confidence interval",
+    "R squared (eta squared)",
+    "F, DFn, DFd",
+    "P value (F test)",
+    "Significantly different variances?",
+    "Sample size, column A",
+    "Sample size, column B"
+  ),
+  Value = c(
+    experiment_id,
+    col1,
+    "",
+    col2,
+    format(tt$p.value, digits = 4),
+    ifelse(tt$p.value < 0.0001, "<0.0001", ""),
+    ifelse(tt$p.value < 0.05, "Yes", "No"),
+    "Two-tailed",
+    paste0("t = ", round(tt$statistic,3), ", df = ", round(tt$parameter,2)),
+    round(mean1, 4),
+    round(mean2, 4),
+    paste0(round(mean1 - mean2,4), " ± ", round(sd1/sqrt(sumstats$n[1]),4)),
+    paste0(round(lower_CI,3), " to ", round(upper_CI,3)),
+    round(tt$statistic^2 / (tt$statistic^2 + tt$parameter), 4),
+    paste0(round(f_test$statistic,3), ", ", f_test$parameter[1], ", ", f_test$parameter[2]),
+    signif(f_test$p.value, 3),
+    ifelse(f_test$p.value < 0.05, "Yes", "No"),
+    sumstats$n[1],
+    sumstats$n[2]
+  )
+)
+```
+\pagebreak
+# Build Table 2 (Descriptive Statistics)
+
+```{r}
+desc <- data.frame(
+  Statistic = c(
+    "Number of values",
+    "Minimum",
+    "25% Percentile",
+    "Median",
+    "75% Percentile",
+    "Maximum",
+    "Mean",
+    "Std. Deviation",
+    "Std. Error of Mean",
+    "Lower 95% CI",
+    "Upper 95% CI"
+  ),
+  Column_A = c(
+    sumstats$n[1],
+    min(data[[col1]], na.rm = TRUE),
+    quantile(data[[col1]], 0.25, na.rm = TRUE),
+    quantile(data[[col1]], 0.50, na.rm = TRUE),
+    quantile(data[[col1]], 0.75, na.rm = TRUE),
+    max(data[[col1]], na.rm = TRUE),
+    mean1,
+    sd1,
+    sd1 / sqrt(sumstats$n[1]),
+    mean1 - qt(0.975, df = sumstats$n[1]-1) * (sd1/sqrt(sumstats$n[1])),
+    mean1 + qt(0.975, df = sumstats$n[1]-1) * (sd1/sqrt(sumstats$n[1]))
+  ),
+  Column_B = c(
+    sumstats$n[2],
+    min(data[[col2]], na.rm = TRUE),
+    quantile(data[[col2]], 0.25, na.rm = TRUE),
+    quantile(data[[col2]], 0.50, na.rm = TRUE),
+    quantile(data[[col2]], 0.75, na.rm = TRUE),
+    max(data[[col2]], na.rm = TRUE),
+    mean2,
+    sd2,
+    sd2 / sqrt(sumstats$n[2]),
+    mean2 - qt(0.975, df = sumstats$n[2]-1) * (sd2/sqrt(sumstats$n[2])),
+    mean2 + qt(0.975, df = sumstats$n[2]-1) * (sd2/sqrt(sumstats$n[2]))
+  )
+)
+```
+\pagebreak
+# Display Both Tables
+
+```{r echo=FALSE}
+kable(
+  table1,
+  caption = "Table 1. Unpaired t-test (GraphPad-style)",
+  align = "ll"
+) %>%
+  kable_styling(full_width = FALSE, position = "left")
+
+kable(
+  desc,
+  caption = "Table 2. Descriptive Statistics (GraphPad-style)",
+  align = "lcc",
+  digits = 4
+) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+\pagebreak
+# Plot: Jitter Points + Mean Lines (No Box)
+
+```{r}
+ggplot(df_long, aes(x = group, y = value)) +
+  geom_jitter(
+    aes(color = group),
+    width = 0.21, size = 2.2, alpha = 0.8, show.legend = FALSE
+  ) +
+  geom_segment(
+    data = sumstats,
+    aes(
+      x = as.numeric(factor(group)) - 0.22,
+      xend = as.numeric(factor(group)) + 0.22,
+      y = mean,
+      yend = mean
+    ),
+    linewidth = 1.1,
+    inherit.aes = FALSE
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 10),
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)
+  ) +
+  labs(
+    title = "Group Comparison",
+    x = "Fibre Type",
+    y = "Heteroplasmy (%)"
+  ) +
+  theme_bw(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+```
