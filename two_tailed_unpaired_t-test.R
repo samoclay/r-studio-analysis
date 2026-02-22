@@ -9,7 +9,7 @@ library(tidyr)
 ### 2. Import your tab-delimited dataset
 ###    (Two numeric columns, any names)
 ### ============================================================
-data <- read.delim("27815R1", header = TRUE, sep = "\t")
+data <- read.delim("CSV_FILE_NAME/PATH_HERE", header = TRUE, sep = "\t")
 
 # Extract column names automatically
 col1 <- names(data)[1]
@@ -213,3 +213,4 @@ desc <- data.frame(
 )
 
 print(desc, row.names = FALSE)
+
