@@ -1,20 +1,14 @@
-###  Install necessary packages
 library(ggplot2)
+library(dplyr)
+library(tidyr)
 
 data <- read.delim("Dataset.1", header = TRUE, sep = "\t")
-
-# Extract column names automatically
-col1 <- names(data)[1]
-col2 <- names(data)[2]
-
-### Prepare data for the plot (Points + Mean ± 95% CI)
 
 df_long <- data %>%
   pivot_longer(cols = everything(),
                names_to = "group",
                values_to = "value")
 
-# Summary stats per group
 sumstats <- df_long %>%
   group_by(group) %>%
   summarise(
@@ -26,16 +20,12 @@ sumstats <- df_long %>%
     .groups = "drop"
   )
 
-###  Plot: Points + Mean ± 95% CI
-
 plot_out <- ggplot(df_long, aes(x = group, y = value)) +
-  geom_jitter(
-    aes(color = group),
-    width = 0.21,                 
-    size = 2.2, alpha = 0.8,
-    show.legend = FALSE
-  ) +
-  # --- ADD a horizontal mean line per group ---
+  geom_jitter(aes(color = group),
+              width = 0.21,
+              size = 2.2,
+              alpha = 0.8,
+              show.legend = FALSE) +
   geom_segment(
     data = sumstats,
     aes(
@@ -63,4 +53,8 @@ plot_out <- ggplot(df_long, aes(x = group, y = value)) +
   theme_bw(base_size = 14) +
   theme(plot.title = element_text(face = "bold", hjust = 0.5))
 
-print(plot_out)
+ggsave("group_comparison.png",
+       plot = plot_out,
+       width = 6,
+       height = 5,
+       dpi = 300)
