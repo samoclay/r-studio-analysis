@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - framework-files
+      - feature/*
+      - samoclay*
 
 jobs:
   run-r:
